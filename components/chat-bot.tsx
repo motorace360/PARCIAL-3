@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -20,56 +19,52 @@ interface ChatBotProps {
   onClose: () => void
 }
 
+const fallbackResponses = {
+  mantenimiento: "¡Hola! 💻 Ofrezco servicios completos de mantenimiento que incluyen limpieza, optimización y actualización de software. ¿Te gustaría agendar una revisión?",
+  hardware: "¡Genial que preguntes por hardware! 🔧 Instalo y vendo componentes como RAM, discos duros, tarjetas gráficas y más. Todos con garantía. ¿Qué componente necesitas?",
+  backup: "¡La seguridad de tus datos es importante! 🔒 Ofrezco servicios de respaldo en la nube y local, además de recuperación de datos. ¿Te gustaría proteger tu información?",
+  precio: "¡Gracias por tu interés! 💰 Los precios varían según el servicio. El diagnóstico inicial es gratuito. ¿Sobre qué servicio quieres saber más?",
+  hola: "¡Hola! 👋 ¡Me alegro de verte! Soy Oscar Jaramillo, tu especialista técnico. ¿En qué puedo ayudarte hoy?",
+  "como estas": "¡Muy bien, gracias por preguntar! 😊 Listo para ayudarte con cualquier necesidad técnica que tengas. ¿En qué puedo asistirte?",
+  "quien eres": "¡Hola! 👨‍💻 Soy Oscar Jaramillo, un técnico especializado en mantenimiento de computadores, instalación de hardware y servicios de backup. Tengo más de 10 años de experiencia ayudando a personas como tú con sus necesidades tecnológicas. ¿En qué puedo ayudarte hoy?",
+  default: "¡Hola! 👋 Soy Oscar, tu técnico de confianza. Puedo ayudarte con mantenimiento de computadores, hardware, backup y más. ¿Qué te gustaría saber?",
+};
+
 export default function ChatBot({ onClose }: ChatBotProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      text: "¡Hola! Soy oscar Jaramillo. ¿En qué puedo ayudarte hoy? Puedo responder preguntas sobre nuestros servicios de mantenimiento, hardware y backup.",
+      text: "¡Hola! 👨‍💻 Soy Oscar Jaramillo, especialista técnico con más de 10 años de experiencia. Me apasiona ayudar a las personas con sus necesidades tecnológicas. ¿En qué puedo asesorarte hoy? Especializado en:\n\n✨ Mantenimiento de computadores\n🔧 Instalación de hardware\n🔒 Servicios de backup\n💰 Precios accesibles",
       sender: "bot",
       timestamp: new Date(),
     },
   ])
   const [inputValue, setInputValue] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [chatId] = useState(() => Date.now().toString())
 
-  const predefinedResponses: Record<string, string> = {
-    mantenimiento:
-      "Ofrezco servicios completos de mantenimiento que incluyen limpieza interna y externa, optimización del sistema, diagnóstico de problemas y actualización de drivers. ¿Te interesa agendar una cita?",
-    hardware:
-      "Instalo y vendo componentes como memoria RAM, discos duros SSD/HDD, tarjetas gráficas, procesadores y motherboards. Todos con garantía. ¿Qué componente necesitas?",
-    backup:
-      "Ofrezco soluciones de backup automático, recuperación de datos, almacenamiento en la nube y copias de seguridad locales. Tu información estará siempre protegida.",
-    precio:
-      "Los precios varían según el servicio. Ofrezco diagnóstico gratuito y presupuestos sin compromiso. ¿Qué servicio específico te interesa?",
-    contacto:
-      "Puedes contactarme por WhatsApp haciendo clic en el botón verde, o llamarme al +57 123 456 7890. También puedes escribir a contacto@techservices.com",
-    horario:
-      "Atiendo de lunes a sábado de 8:00 AM a 6:00 PM. También ofrezco servicio de emergencia 24/7 para casos urgentes.",
-    garantia:
-      "Todos mis servicios incluyen garantía. Para mantenimiento: 30 días, para instalación de hardware: 90 días, y para servicios de backup: soporte continuo.",
-    domicilio:
-      "Sí, ofrezco servicio a domicilio en toda la ciudad. El costo del desplazamiento se incluye en el presupuesto final.",
-  }
+  const getFallbackResponse = (message: string): string => {
+    const lowercaseMessage = message.toLowerCase().trim();
+    
+    // Check for greetings and common questions first
+    if (lowercaseMessage.includes("hola") || lowercaseMessage.includes("hey") || lowercaseMessage.includes("saludos")) {
+      return fallbackResponses.hola;
+    }
+    if (lowercaseMessage.includes("como estas")) {
+      return fallbackResponses["como estas"];
+    }
+    if (lowercaseMessage.includes("quien eres") || lowercaseMessage.includes("que eres")) {
+      return fallbackResponses["quien eres"];
+    }
 
-  const getBotResponse = (userMessage: string): string => {
-    const message = userMessage.toLowerCase()
-
-    for (const [keyword, response] of Object.entries(predefinedResponses)) {
-      if (message.includes(keyword)) {
-        return response
+    // Check for service-related keywords
+    for (const [key, response] of Object.entries(fallbackResponses)) {
+      if (lowercaseMessage.includes(key)) {
+        return response;
       }
     }
-
-    if (message.includes("hola") || message.includes("buenos") || message.includes("buenas")) {
-      return "¡Hola! ¿En qué puedo ayudarte? Puedo contarte sobre mantenimiento de computadores, instalación de hardware, servicios de backup, precios y más."
-    }
-
-    if (message.includes("gracias")) {
-      return "¡De nada! ¿Hay algo más en lo que pueda ayudarte? Estoy aquí para resolver todas tus dudas sobre nuestros servicios."
-    }
-
-    return "Entiendo tu consulta. Te puedo ayudar con información sobre mantenimiento de computadores, instalación de hardware, servicios de backup, precios y contacto. ¿Sobre qué te gustaría saber más?"
-  }
+    return fallbackResponses.default;
+  };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return
@@ -85,18 +80,52 @@ export default function ChatBot({ onClose }: ChatBotProps) {
     setInputValue("")
     setIsLoading(true)
 
-    // Simulate bot thinking time
-    setTimeout(() => {
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: inputValue,
+          chatId,
+        }),
+      })
+
+      if (!response.ok && response.status === 429) {
+        const fallbackText = getFallbackResponse(inputValue);
+        const botResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          text: fallbackText,
+          sender: "bot",
+          timestamp: new Date(),
+        }
+        setMessages((prev) => [...prev, botResponse])
+        return;
+      }
+
+      const data = await response.json()
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: getBotResponse(inputValue),
+        text: data.text || getFallbackResponse(inputValue),
         sender: "bot",
         timestamp: new Date(),
       }
 
       setMessages((prev) => [...prev, botResponse])
+    } catch (error) {
+      console.error("Error:", error)
+      const fallbackText = getFallbackResponse(inputValue);
+      const botResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        text: fallbackText,
+        sender: "bot",
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, botResponse])
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
