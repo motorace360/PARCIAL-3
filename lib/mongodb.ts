@@ -1,33 +1,39 @@
 import { MongoClient } from 'mongodb';
 
-if (!process.env.MONGODB_URI) {
-  if (process.env.NODE_ENV === 'development') {
-    throw new Error(
-      'Please define the MONGODB_URI environment variable inside .env.local'
-    );
-  } else {
-    throw new Error(
-      'Please define the MONGODB_URI environment variable in your deployment platform'
-    );
-  }
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  throw new Error(
+    'Please define the MONGODB_URI environment variable inside your platform settings'
+  );
 }
 
-const uri = process.env.MONGODB_URI;
 const options = {
   maxPoolSize: 10,
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
 };
 
-let client: MongoClient;
-let clientPromise: Promise<MongoClient>;
+// Cache the MongoDB connection
+let cachedClient: MongoClient | null = null;
+let cachedPromise: Promise<MongoClient> | null = null;
 
-try {
-  client = new MongoClient(uri, options);
-  clientPromise = client.connect();
-} catch (e) {
-  throw new Error('Failed to connect to MongoDB');
+export async function connectToDatabase(): Promise<MongoClient> {
+  if (cachedClient) {
+    return cachedClient;
+  }
+
+  if (!cachedPromise) {
+    cachedPromise = MongoClient.connect(MONGODB_URI!, options);
+  }
+
+  try {
+    cachedClient = await cachedPromise;
+    return cachedClient;
+  } catch (error) {
+    cachedPromise = null;
+    throw error;
+  }
 }
 
-// Export a module-scoped MongoClient promise
-export default clientPromise;
+export default connectToDatabase;
