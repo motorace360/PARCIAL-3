@@ -1,22 +1,33 @@
 import { MongoClient } from 'mongodb';
 
 if (!process.env.MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable');
+  if (process.env.NODE_ENV === 'development') {
+    throw new Error(
+      'Please define the MONGODB_URI environment variable inside .env.local'
+    );
+  } else {
+    throw new Error(
+      'Please define the MONGODB_URI environment variable in your deployment platform'
+    );
+  }
 }
 
+const uri = process.env.MONGODB_URI;
 const options = {
   maxPoolSize: 10,
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
-}
+};
 
-// Use a singleton pattern for the client promise
+let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
 
-if (!global._mongoClientPromise) {
-  const client = new MongoClient(process.env.MONGODB_URI, options);
-  global._mongoClientPromise = client.connect();
+try {
+  client = new MongoClient(uri, options);
+  clientPromise = client.connect();
+} catch (e) {
+  throw new Error('Failed to connect to MongoDB');
 }
-clientPromise = global._mongoClientPromise;
 
+// Export a module-scoped MongoClient promise
 export default clientPromise;
